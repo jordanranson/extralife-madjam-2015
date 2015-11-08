@@ -12,15 +12,10 @@ canvas { display: none !important; }
 
             .node.active-node i {
                 background-color: @color4;
+                > span { background-color: @color4; }
             }
 
             .node.target-node {
-                &[data-state~="highlighted"] {
-                    i {
-                        box-shadow: 0 0 0 5px #fff;
-                    }
-                }
-
                 i {
                     box-shadow: 0 0 0 5px @color1;
                 }
@@ -287,6 +282,18 @@ canvas {
         border-radius: @nodeBorderRadius;
 
         transition: background-color 400ms ease-in-out;
+
+        > span {
+            position: absolute;
+
+            top: 21px;
+            left: 21px;
+            height: 8px;
+            width: 62vw;
+
+            transform-origin: 0 50%;
+            transition: background-color 400ms ease-in-out;
+        }
     }
 
     &.target-node {
@@ -297,6 +304,12 @@ canvas {
             transform 400ms ease-in-out,
             opacity 400ms ease-in-out,
             box-shadow @speedFast ease-in-out;
+        }
+
+        &[data-state~="highlighted"] {
+            i {
+                box-shadow: 0 0 0 5px #fff !important;
+            }
         }
 
         &[data-state~="locked"] {
@@ -315,6 +328,10 @@ canvas {
             > i {
                 background-color: #fff !important;
                 opacity: 1 !important;
+
+                > span {
+                    background-color: #fff !important;
+                }
             }
         }
     }

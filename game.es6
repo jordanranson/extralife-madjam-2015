@@ -108,6 +108,7 @@ class Level {
         this.gameObjects = [];
         this.nextLevel = false;
         this.lost = false;
+        this.won = false;
 
         this.score = 0;
 
@@ -178,6 +179,7 @@ class Level {
 
     win() {
         if(this.lost) return;
+        this.won = true;
 
         this.game.$results.data('transitioning', true);
 
@@ -203,6 +205,7 @@ class Level {
     }
 
     lose() {
+        if(this.won) return;
         this.lost = true;
 
         this.game.$results.data('transitioning', true);
@@ -469,6 +472,7 @@ class NodeChild extends Node {
         this.facing = options.facing;
         this.next = options.next || false;
         this.overlap = 0;
+        this.force = 0;
 
         console.log('making self');
 
@@ -482,6 +486,8 @@ class NodeChild extends Node {
     push(force) {
         if(this.locked) return;
 
+        this.force = force;
+
         let pos = MathUtil.pointOnLine(force, this.start, this.end);
         this.x = pos.x;
         this.y = pos.y;
@@ -489,7 +495,6 @@ class NodeChild extends Node {
 
     updateEl() {
         super.updateEl();
-
         this.$el.attr('data-state', this.locked ? 'locked' : '');
     }
 
@@ -545,10 +550,17 @@ class NodeActive extends Node {
 
         this.$i = this.$el.find('i');
 
+        this.$lines = [];
+
         this.childNodes = [];
         options.childNodes.forEach((nodeData) => {
             let node = new NodeChild(game, x, y, nodeData);
             this.childNodes.push(node);
+
+            let $line = $(document.createElement('span'));
+            this.$i.append($line);
+
+            this.$lines.push($line);
         });
 
         this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
@@ -615,25 +627,41 @@ class NodeActive extends Node {
     updateEl() {
         super.updateEl();
         this.$el.attr('data-state', this.locked ? 'locked' : '');
+
+        if(this.$lines && this.$lines.length) {
+            for(let i = 0; i < this.childNodes.length; i++) {
+                let child = this.childNodes[i];
+                let $line = this.$lines[i];
+                let transform = '';
+
+                //transform += `translate(-${NodeChild.radius * this.force}px, 0px) `;
+                transform += `rotate(${MathUtil.toDeg(this.angle) - MathUtil.toDeg(child.facing)}deg) `;
+                transform += `scale(${this.force}, ${1}) `;
+
+                $line.css('transform', transform);
+            }
+        }
     }
 
     update() {
         super.update();
 
-        if(this.touch) {
-            if(this.game.mobile()) {
-                this.force = this.touch.force;
+        if(!this.game.level.won) {
+            if (this.touch) {
+                if (this.game.mobile()) {
+                    this.force = this.touch.force;
+                }
+                else {
+                    this.force = MathUtil.clamp(this.force + 0.01, 0, 1);
+                }
             }
             else {
-                this.force = MathUtil.clamp(this.force+0.01, 0, 1);
-            }
-        }
-        else {
-            if(this.game.mobile()) {
-                this.force = 0;
-            }
-            else {
-                this.force = MathUtil.clamp(this.force-0.01, 0, 1);
+                if (this.game.mobile()) {
+                    this.force = 0;
+                }
+                else {
+                    this.force = MathUtil.clamp(this.force - 0.01, 0, 1);
+                }
             }
         }
 
