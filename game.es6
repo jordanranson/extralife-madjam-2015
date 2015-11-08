@@ -3,6 +3,15 @@
 
 var _forceMobile = false;
 
+var Constants = {
+    nodeSize: 46
+};
+
+var Levels = {
+    level0: {
+        level: 0
+    }
+};
 
 class MathUtil {
     static clamp(value, min, max) {
@@ -15,6 +24,14 @@ class MathUtil {
 
         if (value < 0) return max + 1 + value;
         else return min + value;
+    }
+
+    static toRad(deg) {
+        return deg * (Math.PI / 180);
+    }
+
+    static toDeg(rad) {
+        return rad * (180 / Math.PI);
     }
 }
 
@@ -65,21 +82,203 @@ class Queue {
     }
 }
 
+class Level {
+    constructor(game, levelData) {
+        this.game = game;
+        this.data = levelData;
+
+        let $el = $(document.createElement('div'));
+        $el.addClass('level container');
+        $el.attr('data-level', levelData.level);
+        this.$el = $el;
+    }
+
+    load() {
+        let node = new NodeActive(this.game, 17, 17);
+
+        this.$el.appendTo(this.game.$el);
+    }
+}
+
+class GameObject {
+    constructor(game, x, y) {
+        this.game = game;
+
+        let body = this.physicsBody();
+        body.state.pos.x = x;
+        body.state.pos.y = y;
+
+        this.body = body;
+        this.game.world.add(this.body);
+    }
+
+    get x() {
+        return this.body.state.pos.x;
+    }
+
+    set x(val) {
+        this.body.state.pos.x = val;
+    }
+
+    get y() {
+        return this.body.state.pos.y;
+    }
+
+    set y(val) {
+        this.body.state.pos.y = val;
+    }
+
+    get angle() {
+        return this.body.state.angular.pos;
+    }
+
+    set angle(val) {
+        this.body.state.angular.pos = val;
+    }
+
+
+    // extensible methods
+
+    physicsBody() {
+        return null;
+    }
+
+
+    // core methods
+
+    update() {
+        let x = this.body.pos
+    }
+}
+
+class ElemObject extends GameObject {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.scale = 1;
+        this.state = '';
+
+        let $el = $(document.createElement('div'));
+        $el.addClass(this.className());
+
+        this.$el = $el;
+        this.updateEl();
+        this.$el.appendTo(this.game.level.$el);
+    }
+
+    // extensible methods
+
+    className() {
+        return '';
+    }
+
+
+    // core methods
+
+    updateEl() {
+        let transform = '';
+
+        transform += `translate(${this.x}px, ${this.y}px) `;
+        transform += `rotate(${MathUtil.toDeg(this.angle)}deg) `;
+        transform += `scale(${this.scale}, ${this.scale}) `;
+
+        this.$el.css('transform', transform);
+    }
+}
+
+class Node extends ElemObject {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
+        this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
+        this.$el[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
+    }
+
+
+    // Extensible methods
+
+    physicsBody() {
+        let body = Physics.body('rectangle', {
+            width: Constants.nodeSize,
+            height: Constants.nodeSize,
+            angle: MathUtil.toRad(0)
+        });
+
+        return body;
+    }
+
+
+    // Event handlers
+
+    onTouchStart(e) {
+        e.preventDefault();
+        this.checkForce(e);
+    }
+
+    onTouchMove(e) {
+        e.preventDefault();
+        this.checkForce(e);
+    }
+
+    onTouchEnd(e) {
+        e.preventDefault();
+        this.touch = null;
+    }
+
+    checkForce(e) {
+        this.touch = e.touches[0];
+
+        clearTimeout(this._checkForceTimeout);
+        this._checkForceTimeout = setTimeout(() => { this.refreshForceValue(); }, 10);
+    }
+
+    refreshForceValue() {
+        if(this.touch) console.log(this.touch.force.toFixed(2));
+        if(this.touch) setTimeout(() => { this.refreshForceValue(); }, 10);
+    }
+}
+
+class NodeActive extends Node {
+    className() {
+        return 'node active-node';
+    }
+}
+
+class NodeTarget extends Node {
+    className() {
+        return 'node target-node';
+    }
+}
+
+class Obstacle extends ElemObject {
+    className() {
+        return 'obstacle';
+    }
+}
+
+class ObstacleGroup extends GameObject {
+    className() {
+        return 'obstacle-group';
+    }
+}
+
 class Game {
     constructor() {
         this.touch = null;
+        this.world = Physics({});
+        this.level = new Level(this, Levels.level0);
     }
 
     initialize() {
         this.$document = $(document);
         this.$window = $(window);
-        this.$game = $('.x-game');
+        this.$body = $('body');
+        this.$el = $('.x-game');
 
-        this.$game[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
-        this.$game[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
-        this.$game[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
-        this.$game[0].addEventListener('webkitmouseforcewillbegin', (e) => { this.onTouchForce(e); }, false);
-        this.$game[0].addEventListener('webkitmouseforcechanged', (e) => { this.onTouchForce(e); }, false);
+        this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
+        this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
+        this.$el[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
 
         // event handlers
         // todo
@@ -89,6 +288,9 @@ class Game {
 
         // init update loop
         this.run();
+
+        // load first level
+        this.level.load();
     }
 
     orientation() {
@@ -134,7 +336,7 @@ class Game {
     }
 
     onResize() {
-        this.$game
+        this.$el
             .removeClass('orientation-portrait')
             .removeClass('orientation-landscape')
             .addClass('orientation-' + this.orientation());
@@ -152,17 +354,14 @@ class Game {
 
     onTouchStart(e) {
         e.preventDefault();
-        this.checkForce(e);
     }
 
     onTouchMove(e) {
         e.preventDefault();
-        this.checkForce(e);
     }
 
     onTouchEnd(e) {
         e.preventDefault();
-        this.touch = null;
     }
 
     checkForce(e) {
@@ -188,6 +387,11 @@ class Game {
     }
 
     update() {
+        this.time = Date.now();
+        this.world.step(this.time);
+
+        // logic
+
 
     }
 
