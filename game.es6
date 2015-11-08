@@ -4,7 +4,9 @@
 var _forceMobile = false;
 
 var Constants = {
-    nodeSize: 46
+    nodeSize: 46,
+    obstacleSize: 110,
+    obstacleMargin: 13 + 46 + 13
 };
 
 class MathUtil {
@@ -105,6 +107,7 @@ class Level {
 
         this.gameObjects = [];
         this.nextLevel = false;
+        this.lost = false;
 
         this.score = 0;
 
@@ -122,11 +125,9 @@ class Level {
     }
 
     makeLevel() {
-        let halfNode = Constants.nodeSize / 2;
-
         new Queue(0)
             .wait(100, () => {
-                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                let node = new NodeActive(this.game, Game.vw/2, Game.vh/2, {
                     childNodes: [
                         { facing: MathUtil.toRad(90), next: true },
                         { facing: MathUtil.toRad(-90) }
@@ -134,10 +135,10 @@ class Level {
                 });
                 this.gameObjects.push(node);
 
-                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                let node2 = new NodeTarget(this.game, 100, Game.vh/2);
                 this.gameObjects.push(node2);
 
-                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+                let node3 = new NodeTarget(this.game, Game.vw - 100, Game.vh/2);
                 this.gameObjects.push(node3);
             })
             .next(() => { this.$el.appendTo(this.game.$el); })
@@ -176,6 +177,8 @@ class Level {
     }
 
     win() {
+        if(this.lost) return;
+
         this.game.$results.data('transitioning', true);
 
         new Queue(0)
@@ -200,7 +203,26 @@ class Level {
     }
 
     lose() {
-        console.log('get fucked');
+        this.lost = true;
+
+        this.game.$results.data('transitioning', true);
+
+        new Queue(0)
+            .wait(500, () => {})
+            .next(() => { this.game.$results.css('display', 'block'); })
+            .next(() => { this.game.$results.removeClass('closed'); })
+            .next(() => { this.game.$results.removeClass('lose'); })
+            .next(() => { this.game.$results.removeClass('win'); })
+            .next(() => { this.game.$results.addClass('reset'); })
+            .next(() => { this.game.$results.addClass('lose'); })
+            .next(() => { this.game.$results.removeClass('reset'); })
+            .next(() => { this.game.$results.addClass('open'); })
+            .wait(1700, () => {
+                this.unload();
+                this.game.$el.empty();
+                this.game.$results.data('transitioning', false);
+            })
+            .run();
     }
 }
 
@@ -210,18 +232,16 @@ class Level0 extends Level {
     }
 
     makeLevel() {
-        let halfNode = Constants.nodeSize / 2;
-
         new Queue(0)
             .wait(100, () => {
-                let node = new NodeActive(this.game, Game.vw * .25 - halfNode, Game.vh/2 - halfNode, {
+                let node = new NodeActive(this.game, Game.vw * .25, Game.vh/2, {
                     childNodes: [
                         { facing: MathUtil.toRad(90), next: true }
                     ]
                 });
                 this.gameObjects.push(node);
 
-                let node2 = new NodeTarget(this.game, Game.vw * .75 - halfNode, Game.vh/2 - halfNode);
+                let node2 = new NodeTarget(this.game, Game.vw * .75, Game.vh/2);
                 this.gameObjects.push(node2);
             })
             .next(() => { this.$el.appendTo(this.game.$el); })
@@ -235,23 +255,23 @@ class Level1 extends Level {
     }
 
     makeLevel() {
-        let halfNode = Constants.nodeSize / 2;
-
         new Queue(0)
             .wait(100, () => {
-                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                let node = new NodeActive(this.game, Game.vw * .8, Game.vh/2, {
                     childNodes: [
-                        { facing: MathUtil.toRad(90), next: true },
-                        { facing: MathUtil.toRad(-90) }
+                        { facing: MathUtil.toRad(-90), next: true }
                     ]
                 });
                 this.gameObjects.push(node);
 
-                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                let node2 = new NodeTarget(this.game, Game.vw * .2, Game.vh/2);
                 this.gameObjects.push(node2);
 
-                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
-                this.gameObjects.push(node3);
+                let obstacle = new ObstacleSlide(this.game, Game.vw * .5, Game.vh * .18);
+                this.gameObjects.push(obstacle);
+
+                let obstacle2 = new ObstacleSlide(this.game, Game.vw * .5, Game.vh * .82);
+                this.gameObjects.push(obstacle2);
             })
             .next(() => { this.$el.appendTo(this.game.$el); })
             .run();
@@ -264,11 +284,9 @@ class Level2 extends Level {
     }
 
     makeLevel() {
-        let halfNode = Constants.nodeSize / 2;
-
         new Queue(0)
             .wait(100, () => {
-                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                let node = new NodeActive(this.game, Game.vw/2, Game.vh/2, {
                     childNodes: [
                         { facing: MathUtil.toRad(90), next: true },
                         { facing: MathUtil.toRad(-90) }
@@ -276,10 +294,10 @@ class Level2 extends Level {
                 });
                 this.gameObjects.push(node);
 
-                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                let node2 = new NodeTarget(this.game, Game.vw * .2, Game.vh/2);
                 this.gameObjects.push(node2);
 
-                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+                let node3 = new NodeTarget(this.game, Game.vw - (Game.vw * .2), Game.vh/2);
                 this.gameObjects.push(node3);
             })
             .next(() => { this.$el.appendTo(this.game.$el); })
@@ -339,6 +357,7 @@ class GameObject {
     // core methods
 
     unload() {
+        console.log('unloading');
         this.game.world.removeBody(this.body);
     }
 
@@ -378,13 +397,17 @@ class ElemObject extends GameObject {
 
         this.$el = $el;
         this.updateEl();
-        this.$el.appendTo(this.game.level.$el);
+        if(this.parentNode()) this.$el.appendTo(this.parentNode());
     }
 
     // extensible methods
 
     className() {
         return '';
+    }
+
+    parentNode() {
+        return this.game.level.$el;
     }
 
 
@@ -578,6 +601,10 @@ class NodeActive extends Node {
     unload() {
         super.unload();
 
+        this.childNodes.forEach((node) => {
+            node.unload();
+        });
+
         this.$el[0].removeEventListener('touchstart');
         this.$el[0].removeEventListener('mousedown');
         this.$el[0].removeEventListener('touchmove');
@@ -654,14 +681,133 @@ class NodeTarget extends Node {
 }
 
 class Obstacle extends ElemObject {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.addTag('obstacle');
+    }
+
     className() {
         return 'obstacle';
     }
+
+    //parentNode() {
+    //    return false;
+    //}
+
+    physicsBody(x, y) {
+        let body = Physics.body('rectangle', {
+            x: x,
+            y: y,
+            width: Constants.obstacleSize,
+            height: Constants.obstacleSize,
+            angle: 0
+        });
+
+        return body;
+    }
+
+    collide(other) {
+        super.collide(other);
+
+        if(this.game.level.lost) return;
+
+        if(other.hasTag('node-child')) {
+            this.game.level.lose();
+        }
+    }
 }
 
-class ObstacleGroup extends GameObject {
+class ObstacleSlide extends Obstacle {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.body.treatment = 'static';
+
+        this.origY = this.y;
+        this.time = 0;
+    }
+
+    update() {
+        super.update();
+
+        this.time++;
+
+        let d = Math.sin(this.time / 75) * (Constants.obstacleSize * .38);
+        this.y = this.origY + d;
+
+        //this.body.state.pos.set(this.x, this.origY + d);
+
+        //this.y = this.origY + d;
+    }
+}
+
+class ObstacleGroup extends ElemObject {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.addTag('obstacle-group');
+
+        this.ready();
+    }
+
     className() {
         return 'obstacle-group';
+    }
+
+    physicsBody(x, y) {
+        let obstacles = this.obstacles();
+        this.gameObjects = obstacles;
+
+        let body = Physics.body('compound', {
+            x: x,
+            y: y,
+            children: obstacles
+        });
+
+        return body;
+    }
+
+    obstacles() {
+        return [];
+    }
+
+    ready() {
+        this.gameObjects.forEach((body) => {
+            body._gameObject.$el.appendTo(this.$el);
+        });
+    }
+}
+
+class OGFourSquares extends ObstacleGroup {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.angle = MathUtil.toRad(45);
+    }
+
+    obstacles() {
+        let objects = [];
+
+        for(let i = 0; i < 4; i++) {
+            let col = i % 2;
+            let row = i / 2 << 0;
+            let offset = Constants.obstacleMargin + Constants.obstacleSize;
+
+            let x = offset * col;
+            let y = offset * row;
+
+            let obstacle = new Obstacle(this.game, x, y);
+            objects.push(obstacle.body);
+        }
+
+        return objects;
+    }
+
+    update() {
+        super.update();
+
+
     }
 }
 
@@ -674,6 +820,23 @@ class Game {
             Physics.behavior('body-event-response')
         ]);
         this.world = world;
+
+        var renderer = Physics.renderer('canvas', {
+            el: 'canvas',
+            width: 667,
+            height: 375,
+            meta: false, // don't display meta data
+            styles: {
+                // set colors for the circle bodies
+                'circle' : {
+                    strokeStyle: 'hsla(60, 37%, 17%, 1)',
+                    lineWidth: 1,
+                    fillStyle: 'hsla(60, 37%, 57%, 0.8)',
+                    angleIndicator: 'hsla(60, 37%, 17%, 0.4)'
+                }
+            }
+        });
+        this.world.add( renderer );
 
         this.currentLevel = -1;
         this.levels = [
@@ -699,8 +862,8 @@ class Game {
         else this.isMobile = !(window.matchMedia('(min-device-width: 1024px)').matches);
 
         // event handlers
-        //this.$results.on('tap', (e) => { this.nextLevel(); });
         this.$results.data('transitioning', false);
+        this.$results.on('tap', (e) => { this.nextLevel(); });
         this.$results.on('click', (e) => { this.nextLevel(); });
 
         // resize window handler
@@ -722,7 +885,7 @@ class Game {
         if(this.$results.data('transitioning')) return;
         this.$results.data('transitioning', true);
 
-        this.currentLevel++;
+        if(this.$results.hasClass('win') || this.$results.hasClass('first-load')) this.currentLevel++;
 
         new Queue(0)
             .next(() => { this.$results.removeClass('first-load'); })
@@ -817,16 +980,21 @@ class Game {
 
     update() {
         this.time = Date.now();
+
+        if(this.level && !this.level.lost) {
+            this.world._bodies.forEach((body) => {
+                let gameObject = body._gameObject;
+                gameObject.update();
+            });
+        }
+
+        if(this.level && this.level.update) this.level.update();
+
         this.world.step(this.time);
+        this.world.render();
 
         // logic
 
-        this.world._bodies.forEach((body) => {
-           let gameObject = body._gameObject;
-            gameObject.update();
-        });
-
-        if(this.level && this.level.update) this.level.update();
     }
 
 

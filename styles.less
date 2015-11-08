@@ -1,3 +1,6 @@
+canvas { display: none !important; }
+
+
 /* Variables */
 
 @speedFast: 150ms;
@@ -103,10 +106,20 @@ body {
     height: 100vh;
 }
 
+.game {
+    z-index: 10;
+}
+
+canvas {
+    z-index: 11 !important;
+}
+
 
 // results
 
 .results {
+    z-index: 20;
+
     &.first-load {
         .stripe {
             transition: none !important;
@@ -227,6 +240,7 @@ body {
     .node {
         display: inline-block;
         position: relative;
+        margin: 0 !important;
 
         transform: translate(0px, 6px) rotate(45deg) scale(.75);
     }
@@ -255,6 +269,8 @@ body {
 
     width: @nodeWidth;
     height: @nodeWidth;
+    margin-top: -@nodeWidth/2;
+    margin-left: -@nodeWidth/2;
 
     transform-origin: 50% 50%;
 
@@ -322,11 +338,33 @@ body {
 
 // Obstacle styles
 
+.obstacle-group {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    width: 292px;
+    height: 292px;
+
+    margin-left: -146px;
+    margin-top: -146px;
+
+
+    transform-origin: 50% 50%;
+}
+
 .obstacle {
     position: absolute;
 
+    top: 0;
+    left: 0;
     width: 110px;
     height: 110px;
 
+    margin-left: -55px;
+    margin-top: -55px;
+
     border-radius: 8px;
+
+    transform-origin: 50% 50%;
 }
