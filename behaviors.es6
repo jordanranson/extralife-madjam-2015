@@ -23,7 +23,7 @@ Physics.behavior('body-event-response', function( parent ){
             this.options.defaults(defaults);
             this.options(options);
 
-            this._once = false;
+            this._once = true;
         },
 
         // no applyTo method
@@ -42,10 +42,20 @@ Physics.behavior('body-event-response', function( parent ){
         respond: function(data) {
             let collisions = data.collisions;
 
-            if(!this._once) {
+            if(this._once) {
                 console.log(collisions);
-                this._once = true;
+                this._once = false;
             }
+
+            collisions.forEach((c) => {
+                let a = c.bodyA;
+                let b = c.bodyB;
+
+                if(a._gameObject && b._gameObject) {
+                    a._gameObject.collide(b._gameObject, c);
+                    b._gameObject.collide(a._gameObject, c);
+                }
+            });
         }
     };
 });

@@ -33,6 +33,25 @@ class MathUtil {
     static toDeg(rad) {
         return rad * (180 / Math.PI);
     }
+
+    static pointOnLine(t, p1, p2) {
+        let x3 = p2.x - p1.x;
+        let y3 = p2.y - p1.y;
+
+        let length = Math.sqrt( x3 * x3 + y3 * y3 );
+
+        x3 *= t;
+        y3 *= t;
+
+        return { x: p1.x + x3, y: p1.y + y3 };
+    }
+
+    static distance(p1, p2) {
+        let x3 = p2.x - p1.x;
+        let y3 = p2.y - p1.y;
+
+        return Math.sqrt(x3*x3 + y3*y3);
+    }
 }
 
 class Queue {
@@ -87,19 +106,68 @@ class Level {
         this.game = game;
         this.data = levelData;
 
+        this.game.$el.attr('data-level', levelData.level);
+
         let $el = $(document.createElement('div'));
-        $el.addClass('level container');
-        $el.attr('data-level', levelData.level);
+        $el.addClass('level');
         this.$el = $el;
+
+        this.gameObjects = [];
+        this.nextLevel = false;
     }
 
     load() {
         let halfNode = Constants.nodeSize / 2;
-        let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode);
-        let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
-        let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
 
-        this.$el.appendTo(this.game.$el);
+        new Queue(10)
+        .wait(100, () => {
+            let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                childNodes: [
+                    { facing: MathUtil.toRad(90), next: true },
+                    { facing: MathUtil.toRad(-90) }
+                ]
+            });
+            this.gameObjects.push(node);
+
+            let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+            this.gameObjects.push(node2);
+
+            let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+            this.gameObjects.push(node3);
+        })
+        .next(() => { this.$el.appendTo(this.game.$el); })
+        .next(() => { this.$el.addClass('show'); })
+        .run();
+    }
+
+    update() {
+        let allLocked = false;
+
+        if(this.gameObjects.length) {
+            allLocked = true;
+            
+            this.gameObjects.forEach((gameObject) => {
+                if(gameObject.hasTag('node-active')) {
+                    console.log(gameObject.locked);
+
+                    if(!gameObject.locked) allLocked = false;
+                }
+            });
+        }
+
+        if(!this.nextLevel && allLocked) {
+            this.nextLevel = true;
+            this.win();
+        }
+    }
+
+    win() {
+        console.log('winner winner chicken dinner');
+        // this.game.nextLevel();
+    }
+
+    lose() {
+        console.log('get fucked');
     }
 }
 
@@ -112,6 +180,8 @@ class GameObject {
 
         this.body = body;
         this.game.world.add(this.body);
+
+        this.tags = [];
     }
 
     get x() {
@@ -128,6 +198,10 @@ class GameObject {
 
     set y(val) {
         this.body.state.pos.y = val;
+    }
+
+    get position() {
+        return { x: this.x, y: this.y };
     }
 
     get angle() {
@@ -149,7 +223,26 @@ class GameObject {
     // core methods
 
     update() {
-        let x = this.body.pos
+
+    }
+
+    collide(other, collision) {
+
+    }
+
+    addTag(tagName) {
+        this.tags.push(tagName);
+    }
+
+    hasTag(tagName) {
+        return !!~this.tags.indexOf(tagName);
+    }
+
+    removeTag(tagName) {
+        if(!this.hasTag(tagName)) return;
+
+        let index = this.tags.indexOf(tagName);
+        this.tags.splice(index, 1);
     }
 }
 
@@ -186,13 +279,27 @@ class ElemObject extends GameObject {
 
         this.$el.css('transform', transform);
     }
+
+    update() {
+        super.update();
+        this.updateEl();
+    }
 }
 
 class Node extends ElemObject {
+    constructor(game, x, y) {
+        super(game, x, y);
+        this.$el.append(document.createElement('i'));
+
+        this.locked = false;
+
+        this.addTag('node');
+    }
+
 
     // Extensible methods
 
-    physicsBody(x, y,) {
+    physicsBody(x, y) {
         let body = Physics.body('rectangle', {
             x: x,
             y: y,
@@ -205,15 +312,107 @@ class Node extends ElemObject {
     }
 }
 
+class NodeChild extends Node {
+    constructor(game, x, y, options) {
+        super(game, x, y);
+
+        let endx = x + (NodeChild.radius * Math.sin(options.facing));
+        let endy = y + (NodeChild.radius * Math.cos(options.facing));
+        this.end = { x: endx, y: endy };
+        this.start = { x, y };
+
+        this.locked = false;
+        this.lockedTo = null;
+        this.facing = options.facing;
+        this.next = options.next || false;
+        this.overlap = 0;
+
+        this.addTag('node-child');
+    }
+
+    className() {
+        return 'node active-node child-node';
+    }
+
+    push(force) {
+        if(this.locked) return;
+
+        let pos = MathUtil.pointOnLine(force, this.start, this.end);
+        this.x = pos.x;
+        this.y = pos.y;
+    }
+
+    updateEl() {
+        super.updateEl();
+
+        this.$el.attr('data-state', this.locked ? 'locked' : '');
+    }
+
+    update() {
+        super.update();
+
+        let mobile = this.game.mobile();
+
+        if(this.locked) {
+            this.x = this.lockedTo.x;
+            this.y = this.lockedTo.y;
+        }
+
+        this.overlap = MathUtil.clamp(this.overlap-1, 0, 1000);
+    }
+
+    collide(other, collision) {
+        super.collide(other, collision);
+
+        let mobile = this.game.mobile();
+
+        if(other.hasTag('node-target')) {
+            let dist = MathUtil.distance(this.position, other.position);
+            let minDist = mobile ? 17 : 17;
+
+            if(dist <= minDist) {
+                other.highlight();
+
+                let minOverlap = 70;
+
+                this.overlap++;
+                if(this.overlap >= minOverlap) {
+                    this.locked = true;
+                    this.lockedTo = other;
+
+                    other.locked = true;
+                }
+            }
+        }
+    }
+
+    static get radius() {
+        return 275;
+    }
+}
+
 class NodeActive extends Node {
-    constructor(game, x, y) {
+    constructor(game, x, y, options) {
         super(game, x, y);
 
         this.touch = null;
+        this.force = 0;
+
+        this.$i = this.$el.find('i');
+
+        this.childNodes = [];
+        options.childNodes.forEach((nodeData) => {
+            let node = new NodeChild(game, x, y, nodeData);
+            this.childNodes.push(node);
+        });
 
         this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
+        this.$el[0].addEventListener('mousedown', (e) => { this.onTouchStart(e); }, false);
         this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
         this.$el[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
+        this.$el[0].addEventListener('mouseup', (e) => { this.onTouchEnd(e); }, false);
+
+        this.addTag('node-active');
     }
 
     className() {
@@ -239,21 +438,86 @@ class NodeActive extends Node {
     }
 
     checkForce(e) {
-        this.touch = e.touches[0];
+        this.touch = e.touches ? e.touches[0] : e;
 
-        clearTimeout(this._checkForceTimeout);
-        this._checkForceTimeout = setTimeout(() => { this.refreshForceValue(); }, 10);
+        if(this.game.mobile()) {
+            clearTimeout(this._checkForceTimeout);
+            this._checkForceTimeout = setTimeout(() => { this.refreshForceValue(); }, 10);
+        }
     }
 
     refreshForceValue() {
-        if(this.touch) console.log(this.touch.force.toFixed(2));
         if(this.touch) setTimeout(() => { this.refreshForceValue(); }, 10);
+    }
+
+
+    // Core methods
+
+    updateEl() {
+        super.updateEl();
+        this.$el.attr('data-state', this.locked ? 'locked' : '');
+    }
+
+    update() {
+        super.update();
+
+        if(this.touch) {
+            if(this.game.mobile()) {
+                this.force = this.touch.force;
+            }
+            else {
+                this.force = MathUtil.clamp(this.force+0.01, 0, 1);
+            }
+        }
+        else {
+            if(this.game.mobile()) {
+                this.force = 0;
+            }
+            else {
+                this.force = MathUtil.clamp(this.force-0.01, 0, 1);
+            }
+        }
+
+        this.$i.css('opacity', 1-(this.force*.62));
+
+        let allLocked = true;
+        this.childNodes.forEach((childNode) => {
+            childNode.push(this.force);
+            if(childNode.locked === false) allLocked = false;
+        });
+
+        if(allLocked) {
+            this.locked = true;
+        }
     }
 }
 
 class NodeTarget extends Node {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.locked = false;
+        this.highlighted = false;
+
+        this.addTag('node-target');
+    }
+
     className() {
         return 'node target-node';
+    }
+
+    highlight() {
+        this.highlighted = true;
+    }
+
+    updateEl() {
+        super.updateEl();
+        this.$el.attr('data-state', this.locked ? 'locked' : this.highlighted ? 'highlighted' : '');
+    }
+
+    update() {
+        super.update();
+        this.highlighted = false;
     }
 }
 
@@ -271,8 +535,6 @@ class ObstacleGroup extends GameObject {
 
 class Game {
     constructor() {
-        //this.bounds = Physics.aabb(0, 0, Game.vw, Game.vh);
-
         let world = Physics({});
         world.add([
             Physics.behavior('sweep-prune'),
@@ -281,7 +543,9 @@ class Game {
         ]);
         this.world = world;
 
-        this.level = new Level(this, Levels.level0);
+        this.currentLevel = 0;
+        this.levels = [Levels.level0];
+        this.level = null;
     }
 
     initialize() {
@@ -294,6 +558,9 @@ class Game {
         this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
         this.$el[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
 
+        if (_forceMobile) this.isMobile = !(window.matchMedia('(min-width: 1024px)').matches); // debug
+        else this.isMobile = !(window.matchMedia('(min-device-width: 1024px)').matches);
+
         // event handlers
         // todo
 
@@ -304,7 +571,7 @@ class Game {
         this.run();
 
         // load first level
-        this.level.load();
+        this.nextLevel();
     }
 
     orientation() {
@@ -312,8 +579,14 @@ class Game {
     }
 
     mobile() {
-        if (_forceMobile) return !(window.matchMedia('(min-width: 1024px)').matches); // debug
-        else return !(window.matchMedia('(min-device-width: 1024px)').matches);
+        return this.isMobile;
+    }
+
+    nextLevel() {
+        this.level++;
+
+        this.level = new Level(this, this.levels[this.currentLevel]);
+        this.level.load();
     }
 
     inputPosition(e) {
@@ -378,18 +651,6 @@ class Game {
         e.preventDefault();
     }
 
-    checkForce(e) {
-        this.touch = e.touches[0];
-
-        clearTimeout(this._checkForceTimeout);
-        this._checkForceTimeout = setTimeout(() => { this.refreshForceValue(); }, 10);
-    }
-
-    refreshForceValue() {
-        if(this.touch) console.log(this.touch.force.toFixed(2));
-        if(this.touch) setTimeout(() => { this.refreshForceValue(); }, 10);
-    }
-
 
     // Update loop
 
@@ -406,7 +667,12 @@ class Game {
 
         // logic
 
+        this.world._bodies.forEach((body) => {
+           let gameObject = body._gameObject;
+            gameObject.update();
+        });
 
+        if(this.level) this.level.update();
     }
 
 

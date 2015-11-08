@@ -1,15 +1,25 @@
 /* Variables */
 
+@speedFast: 150ms;
+
 .theme(@level, @color1, @color2, @color3, @color4) {
     &[data-level="@{level}"] {
         background-color: @color2;
 
-        .node.active-node {
+        .node.active-node i {
             background-color: @color4;
         }
 
         .node.target-node {
-            box-shadow: 0 0 0 5px @color1;
+            &[data-state~="highlighted"] {
+                i {
+                    box-shadow: 0 0 0 5px #fff;
+                }
+            }
+
+            i {
+                box-shadow: 0 0 0 5px @color1;
+            }
         }
 
         .obstacle {
@@ -62,11 +72,26 @@ body {
     height: 100vh;
 }
 
+.game {
+    .theme(0, #084D68, #0D7685, #69C181, #CCF186);
+}
+
 
 // Level themes
 
 .level {
-    .theme(0, #084D68, #0D7685, #69C181, #CCF186);
+    position: absolute;
+    z-index: 1;
+
+    top: 0;
+    left: 0;
+
+    transition: opacity 700ms ease-in-out;
+    opacity: 0;
+
+    &.show {
+        opacity: 1;
+    }
 }
 
 
@@ -80,17 +105,68 @@ body {
     z-index: 10;
 
     width: @nodeWidth;
-    height: 46px;
-    border-radius: @nodeBorderRadius;
+    height: @nodeWidth;
 
     transform-origin: 50% 50%;
 
+    > i {
+        display: block;
+        position: absolute;
+        z-index: 2;
+
+        top: 0;
+        left: 0;
+
+        width: @nodeWidth;
+        height: @nodeWidth;
+        border-radius: @nodeBorderRadius;
+
+        transition: background-color 400ms ease-in-out;
+    }
+
     &.target-node {
         z-index: 1;
+
+        i {
+            transition:
+            transform 400ms ease-in-out,
+            opacity 400ms ease-in-out,
+            box-shadow @speedFast ease-in-out;
+        }
+
+        &[data-state~="locked"] {
+            i {
+                box-shadow: 0 0 0 5px #fff !important;
+                transform: scale(1.38, 1.38);
+                opacity: 0;
+            }
+        }
     }
 
     &.active-node {
         z-index: 2;
+
+        &[data-state~="locked"] {
+            > i {
+                background-color: #fff !important;
+                opacity: 1 !important;
+            }
+        }
+    }
+
+    &.child-node {
+        z-index: 3;
+        pointer-events: none;
+
+        &[data-state~="locked"] {
+
+            transition: transform 150ms ease-in-out;
+
+            > i {
+                background-color: #fff !important;
+                opacity: 1 !important;
+            }
+        }
     }
 }
 
