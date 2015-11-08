@@ -84,6 +84,14 @@ body {
     border-radius: @nodeBorderRadius;
 
     transform-origin: 50% 50%;
+
+    &.target-node {
+        z-index: 1;
+    }
+
+    &.active-node {
+        z-index: 2;
+    }
 }
 
 

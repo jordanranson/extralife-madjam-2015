@@ -94,7 +94,10 @@ class Level {
     }
 
     load() {
-        let node = new NodeActive(this.game, 17, 17);
+        let halfNode = Constants.nodeSize / 2;
+        let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode);
+        let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+        let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
 
         this.$el.appendTo(this.game.$el);
     }
@@ -104,9 +107,8 @@ class GameObject {
     constructor(game, x, y) {
         this.game = game;
 
-        let body = this.physicsBody();
-        body.state.pos.x = x;
-        body.state.pos.y = y;
+        let body = this.physicsBody(x, y);
+        body._gameObject = this; // <3 js
 
         this.body = body;
         this.game.world.add(this.body);
@@ -139,7 +141,7 @@ class GameObject {
 
     // extensible methods
 
-    physicsBody() {
+    physicsBody(x, y) {
         return null;
     }
 
@@ -178,7 +180,7 @@ class ElemObject extends GameObject {
     updateEl() {
         let transform = '';
 
-        transform += `translate(${this.x}px, ${this.y}px) `;
+        transform += `translate(${Math.round(this.x)}px, ${Math.round(this.y)}px) `;
         transform += `rotate(${MathUtil.toDeg(this.angle)}deg) `;
         transform += `scale(${this.scale}, ${this.scale}) `;
 
@@ -187,25 +189,35 @@ class ElemObject extends GameObject {
 }
 
 class Node extends ElemObject {
+
+    // Extensible methods
+
+    physicsBody(x, y,) {
+        let body = Physics.body('rectangle', {
+            x: x,
+            y: y,
+            width: Constants.nodeSize,
+            height: Constants.nodeSize,
+            angle: MathUtil.toRad(45)
+        });
+
+        return body;
+    }
+}
+
+class NodeActive extends Node {
     constructor(game, x, y) {
         super(game, x, y);
+
+        this.touch = null;
 
         this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
         this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
         this.$el[0].addEventListener('touchend', (e) => { this.onTouchEnd(e); }, false);
     }
 
-
-    // Extensible methods
-
-    physicsBody() {
-        let body = Physics.body('rectangle', {
-            width: Constants.nodeSize,
-            height: Constants.nodeSize,
-            angle: MathUtil.toRad(0)
-        });
-
-        return body;
+    className() {
+        return 'node active-node';
     }
 
 
@@ -239,12 +251,6 @@ class Node extends ElemObject {
     }
 }
 
-class NodeActive extends Node {
-    className() {
-        return 'node active-node';
-    }
-}
-
 class NodeTarget extends Node {
     className() {
         return 'node target-node';
@@ -265,8 +271,16 @@ class ObstacleGroup extends GameObject {
 
 class Game {
     constructor() {
-        this.touch = null;
-        this.world = Physics({});
+        //this.bounds = Physics.aabb(0, 0, Game.vw, Game.vh);
+
+        let world = Physics({});
+        world.add([
+            Physics.behavior('sweep-prune'),
+            Physics.behavior('body-collision-detection'),
+            Physics.behavior('body-event-response')
+        ]);
+        this.world = world;
+
         this.level = new Level(this, Levels.level0);
     }
 
@@ -398,11 +412,11 @@ class Game {
 
     // Static methods
 
-    static vw() {
+    static get vw() {
         return window.innerWidth;
     }
 
-    static vh() {
+    static get vh() {
         return window.innerHeight;
     }
 }
