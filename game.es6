@@ -106,7 +106,7 @@ class Level {
         this.game = game;
         this.data = levelData;
 
-        this.game.$el.attr('data-level', levelData.level);
+        this.game.$body.attr('data-level', levelData.level);
 
         let $el = $(document.createElement('div'));
         $el.addClass('level');
@@ -119,7 +119,7 @@ class Level {
     load() {
         let halfNode = Constants.nodeSize / 2;
 
-        new Queue(10)
+        new Queue(0)
         .wait(100, () => {
             let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
                 childNodes: [
@@ -136,8 +136,13 @@ class Level {
             this.gameObjects.push(node3);
         })
         .next(() => { this.$el.appendTo(this.game.$el); })
-        .next(() => { this.$el.addClass('show'); })
         .run();
+    }
+
+    unload() {
+        this.gameObjects.forEach((gameObject) => {
+            gameObject.unload();
+        });
     }
 
     update() {
@@ -145,11 +150,9 @@ class Level {
 
         if(this.gameObjects.length) {
             allLocked = true;
-            
+
             this.gameObjects.forEach((gameObject) => {
                 if(gameObject.hasTag('node-active')) {
-                    console.log(gameObject.locked);
-
                     if(!gameObject.locked) allLocked = false;
                 }
             });
@@ -162,8 +165,26 @@ class Level {
     }
 
     win() {
-        console.log('winner winner chicken dinner');
-        // this.game.nextLevel();
+        this.game.$results.data('transitioning', true);
+
+        new Queue(0)
+            .next(() => {
+                this.game.$results.css('display', 'block');
+                this.game.$results.find('.x-time').html('0s');
+            })
+            .next(() => { this.game.$results.removeClass('closed'); })
+            .next(() => { this.game.$results.removeClass('lose'); })
+            .next(() => { this.game.$results.removeClass('win'); })
+            .next(() => { this.game.$results.addClass('reset'); })
+            .next(() => { this.game.$results.addClass('win'); })
+            .next(() => { this.game.$results.removeClass('reset'); })
+            .next(() => { this.game.$results.addClass('open'); })
+            .wait(1700, () => {
+                this.unload();
+                this.game.$el.empty();
+                this.game.$results.data('transitioning', false);
+            })
+            .run();
     }
 
     lose() {
@@ -221,6 +242,10 @@ class GameObject {
 
 
     // core methods
+
+    unload() {
+        this.game.world.removeBody(this.body);
+    }
 
     update() {
 
@@ -327,6 +352,8 @@ class NodeChild extends Node {
         this.next = options.next || false;
         this.overlap = 0;
 
+        console.log('making self');
+
         this.addTag('node-child');
     }
 
@@ -387,7 +414,7 @@ class NodeChild extends Node {
     }
 
     static get radius() {
-        return 275;
+        return Game.vw * .45;
     }
 }
 
@@ -452,6 +479,16 @@ class NodeActive extends Node {
 
 
     // Core methods
+
+    unload() {
+        super.unload();
+
+        this.$el[0].removeEventListener('touchstart');
+        this.$el[0].removeEventListener('mousedown');
+        this.$el[0].removeEventListener('touchmove');
+        this.$el[0].removeEventListener('touchend');
+        this.$el[0].removeEventListener('mouseup');
+    }
 
     updateEl() {
         super.updateEl();
@@ -543,8 +580,12 @@ class Game {
         ]);
         this.world = world;
 
-        this.currentLevel = 0;
-        this.levels = [Levels.level0];
+        this.currentLevel = -1;
+        this.levels = [
+            Levels.level0,
+            Levels.level0,
+            Levels.level0
+        ];
         this.level = null;
     }
 
@@ -553,6 +594,7 @@ class Game {
         this.$window = $(window);
         this.$body = $('body');
         this.$el = $('.x-game');
+        this.$results = $('.x-results');
 
         this.$el[0].addEventListener('touchstart', (e) => { this.onTouchStart(e); }, false);
         this.$el[0].addEventListener('touchmove', (e) => { this.onTouchMove(e); }, false);
@@ -562,16 +604,15 @@ class Game {
         else this.isMobile = !(window.matchMedia('(min-device-width: 1024px)').matches);
 
         // event handlers
-        // todo
+        //this.$results.on('tap', (e) => { this.nextLevel(); });
+        this.$results.data('transitioning', false);
+        this.$results.on('click', (e) => { this.nextLevel(); });
 
         // resize window handler
         this.initResize();
 
         // init update loop
         this.run();
-
-        // load first level
-        this.nextLevel();
     }
 
     orientation() {
@@ -583,10 +624,26 @@ class Game {
     }
 
     nextLevel() {
-        this.level++;
+        if(this.$results.data('transitioning')) return;
+        this.$results.data('transitioning', true);
 
-        this.level = new Level(this, this.levels[this.currentLevel]);
-        this.level.load();
+        this.currentLevel++;
+        console.log(this.currentLevel);
+
+        new Queue(0)
+            .next(() => { this.$results.removeClass('first-load'); })
+            .next(() => {
+                this.level = new Level(this, this.levels[this.currentLevel]);
+                this.level.load();
+            })
+            .next(() => { this.$results.removeClass('open'); })
+            .next(() => { this.$results.addClass('closed'); })
+            .wait(1300, () => {
+                this.$results.css('display', 'none');
+                this.$results.find('.x-welcome-msg').hide();
+                this.$results.find('.x-msg').show();
+            })
+            .run();
     }
 
     inputPosition(e) {
@@ -672,7 +729,7 @@ class Game {
             gameObject.update();
         });
 
-        if(this.level) this.level.update();
+        if(this.level && this.level.update) this.level.update();
     }
 
 
