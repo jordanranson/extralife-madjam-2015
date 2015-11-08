@@ -7,12 +7,6 @@ var Constants = {
     nodeSize: 46
 };
 
-var Levels = {
-    level0: {
-        level: 0
-    }
-};
-
 class MathUtil {
     static clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
@@ -102,11 +96,8 @@ class Queue {
 }
 
 class Level {
-    constructor(game, levelData) {
+    constructor(game) {
         this.game = game;
-        this.data = levelData;
-
-        this.game.$body.attr('data-level', levelData.level);
 
         let $el = $(document.createElement('div'));
         $el.addClass('level');
@@ -114,29 +105,43 @@ class Level {
 
         this.gameObjects = [];
         this.nextLevel = false;
+
+        this.score = 0;
+
+        this.time = Date.now();
+        this.lastTime = Date.now();
+    }
+
+    levelNumber() {
+        return 0;
     }
 
     load() {
+        this.game.$el.attr('data-level', this.levelNumber());
+        this.makeLevel();
+    }
+
+    makeLevel() {
         let halfNode = Constants.nodeSize / 2;
 
         new Queue(0)
-        .wait(100, () => {
-            let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
-                childNodes: [
-                    { facing: MathUtil.toRad(90), next: true },
-                    { facing: MathUtil.toRad(-90) }
-                ]
-            });
-            this.gameObjects.push(node);
+            .wait(100, () => {
+                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                    childNodes: [
+                        { facing: MathUtil.toRad(90), next: true },
+                        { facing: MathUtil.toRad(-90) }
+                    ]
+                });
+                this.gameObjects.push(node);
 
-            let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
-            this.gameObjects.push(node2);
+                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node2);
 
-            let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
-            this.gameObjects.push(node3);
-        })
-        .next(() => { this.$el.appendTo(this.game.$el); })
-        .run();
+                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node3);
+            })
+            .next(() => { this.$el.appendTo(this.game.$el); })
+            .run();
     }
 
     unload() {
@@ -146,6 +151,7 @@ class Level {
     }
 
     update() {
+        this.time = Date.now();
         let allLocked = false;
 
         if(this.gameObjects.length) {
@@ -162,15 +168,21 @@ class Level {
             this.nextLevel = true;
             this.win();
         }
+
+        let deltaTime = this.time - this.lastTime;
+        if(!this.nextLevel) this.score += deltaTime;
+
+        this.lastTime = this.time;
     }
 
     win() {
         this.game.$results.data('transitioning', true);
 
         new Queue(0)
+            .wait(500, () => {})
             .next(() => {
                 this.game.$results.css('display', 'block');
-                this.game.$results.find('.x-time').html('0s');
+                this.game.$results.find('.x-time').html((this.score / 1000).toFixed(1) + 's');
             })
             .next(() => { this.game.$results.removeClass('closed'); })
             .next(() => { this.game.$results.removeClass('lose'); })
@@ -189,6 +201,89 @@ class Level {
 
     lose() {
         console.log('get fucked');
+    }
+}
+
+class Level0 extends Level {
+    levelNumber() {
+        return 0;
+    }
+
+    makeLevel() {
+        let halfNode = Constants.nodeSize / 2;
+
+        new Queue(0)
+            .wait(100, () => {
+                let node = new NodeActive(this.game, Game.vw * .25 - halfNode, Game.vh/2 - halfNode, {
+                    childNodes: [
+                        { facing: MathUtil.toRad(90), next: true }
+                    ]
+                });
+                this.gameObjects.push(node);
+
+                let node2 = new NodeTarget(this.game, Game.vw * .75 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node2);
+            })
+            .next(() => { this.$el.appendTo(this.game.$el); })
+            .run();
+    }
+}
+
+class Level1 extends Level {
+    levelNumber() {
+        return 1;
+    }
+
+    makeLevel() {
+        let halfNode = Constants.nodeSize / 2;
+
+        new Queue(0)
+            .wait(100, () => {
+                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                    childNodes: [
+                        { facing: MathUtil.toRad(90), next: true },
+                        { facing: MathUtil.toRad(-90) }
+                    ]
+                });
+                this.gameObjects.push(node);
+
+                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node2);
+
+                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node3);
+            })
+            .next(() => { this.$el.appendTo(this.game.$el); })
+            .run();
+    }
+}
+
+class Level2 extends Level {
+    levelNumber() {
+        return 2;
+    }
+
+    makeLevel() {
+        let halfNode = Constants.nodeSize / 2;
+
+        new Queue(0)
+            .wait(100, () => {
+                let node = new NodeActive(this.game, Game.vw/2 - halfNode, Game.vh/2 - halfNode, {
+                    childNodes: [
+                        { facing: MathUtil.toRad(90), next: true },
+                        { facing: MathUtil.toRad(-90) }
+                    ]
+                });
+                this.gameObjects.push(node);
+
+                let node2 = new NodeTarget(this.game, 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node2);
+
+                let node3 = new NodeTarget(this.game, Game.vw - 100 - halfNode, Game.vh/2 - halfNode);
+                this.gameObjects.push(node3);
+            })
+            .next(() => { this.$el.appendTo(this.game.$el); })
+            .run();
     }
 }
 
@@ -414,7 +509,7 @@ class NodeChild extends Node {
     }
 
     static get radius() {
-        return Game.vw * .45;
+        return Game.vw * .62;
     }
 }
 
@@ -582,9 +677,9 @@ class Game {
 
         this.currentLevel = -1;
         this.levels = [
-            Levels.level0,
-            Levels.level0,
-            Levels.level0
+            Level0,
+            Level1,
+            Level2
         ];
         this.level = null;
     }
@@ -628,12 +723,11 @@ class Game {
         this.$results.data('transitioning', true);
 
         this.currentLevel++;
-        console.log(this.currentLevel);
 
         new Queue(0)
             .next(() => { this.$results.removeClass('first-load'); })
             .next(() => {
-                this.level = new Level(this, this.levels[this.currentLevel]);
+                this.level = new this.levels[this.currentLevel](this);
                 this.level.load();
             })
             .next(() => { this.$results.removeClass('open'); })
@@ -642,6 +736,9 @@ class Game {
                 this.$results.css('display', 'none');
                 this.$results.find('.x-welcome-msg').hide();
                 this.$results.find('.x-msg').show();
+                this.$results.attr('data-level', this.level.levelNumber());
+
+                this.level.score = 0;
             })
             .run();
     }

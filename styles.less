@@ -3,8 +3,8 @@
 @speedFast: 150ms;
 
 .theme(@level, @color1, @color2, @color3, @color4) {
-    &[data-level="@{level}"] {
-        .game {
+    [data-level="@{level}"] {
+        &.game {
             background-color: @color2;
 
             .node.active-node i {
@@ -28,8 +28,10 @@
             }
         }
 
-        .results {
-            color: @color3;
+        &.results {
+            color: @color2;
+
+            .message i { background-color: @color3; }
 
             .stripe-1 {
                 background-color: @color4;
@@ -47,6 +49,7 @@
                 background-color: @color1;
             }
         }
+
     }
 }
 
@@ -80,9 +83,11 @@ body {
     letter-spacing: -2px;
 
     background-color: #222;
-
-    .theme(0, #084D68, #0D7685, #69C181, #CCF186);
 }
+
+.theme(0, #424478, #595CAE, #6EC189, #DFFCAD);
+.theme(1, #552E5A, #CF7979, #F6E198, #ECFFA3);
+.theme(2, #C2F69B, #9ADEA2, #467292, #80C0CE);
 
 
 /* General layout */
@@ -110,17 +115,12 @@ body {
 
     &.reset {
         .stripe {
-            opacity: 0 !important;
             transform: translate(0, 100%) !important;
             transition: none !important;
         }
     }
 
     &.open {
-        .stripe {
-            opacity: 1;
-        }
-
         .stripe-1 {
             transform: translate(0, 0);
         }
@@ -146,7 +146,6 @@ body {
 
     &.closed {
         .stripe {
-            opacity: 1;
             transform: translate(0, -100%) !important;
         }
 
@@ -179,8 +178,6 @@ body {
 
     transition: all 100ms ease-in-out;
     transform: translate(0, 100%);
-
-    opacity: 0;
 }
 
 .stripe-1 {
@@ -226,6 +223,13 @@ body {
 .message {
     top: 18%;
     font-size: 46px;
+
+    .node {
+        display: inline-block;
+        position: relative;
+
+        transform: translate(0px, 6px) rotate(45deg) scale(.75);
+    }
 }
 
 
