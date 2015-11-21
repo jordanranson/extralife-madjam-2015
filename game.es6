@@ -187,7 +187,18 @@ class Level {
             .wait(500, () => {})
             .next(() => {
                 this.game.$results.css('display', 'block');
-                this.game.$results.find('.x-time').html((this.score / 1000).toFixed(1) + 's');
+                if(this.game.currentLevel >= 2) {
+                    let styles = `
+                        display: inline-block;
+                        font-size: 35px;
+                        letter-spacing: 0px;
+                        margin-top: 37px;
+                    `;
+                    this.game.$results.find('.x-time').html((this.score / 1000).toFixed(1) + `s. <small style="${styles}">Thanks for playing!</small>`);
+                }
+                else {
+                    this.game.$results.find('.x-time').html((this.score / 1000).toFixed(1) + 's');
+                }   
             })
             .next(() => { this.game.$results.removeClass('closed'); })
             .next(() => { this.game.$results.removeClass('lose'); })
@@ -297,11 +308,17 @@ class Level2 extends Level {
                 });
                 this.gameObjects.push(node);
 
-                let node2 = new NodeTarget(this.game, Game.vw * .2, Game.vh/2);
+                let node2 = new NodeTarget(this.game, Game.vw * .1, Game.vh/2);
                 this.gameObjects.push(node2);
 
-                let node3 = new NodeTarget(this.game, Game.vw - (Game.vw * .2), Game.vh/2);
+                let node3 = new NodeTarget(this.game, Game.vw - (Game.vw * .1), Game.vh/2);
                 this.gameObjects.push(node3);
+
+                let obstacle = new ObstacleSlide2(this.game, Game.vw * .7, Game.vh * .5);
+                this.gameObjects.push(obstacle);
+
+                let obstacle2 = new ObstacleSlide3(this.game, Game.vw * .3, Game.vh * .5);
+                this.gameObjects.push(obstacle2);
             })
             .next(() => { this.$el.appendTo(this.game.$el); })
             .run();
@@ -770,6 +787,54 @@ class ObstacleSlide extends Obstacle {
     }
 }
 
+class ObstacleSlide2 extends Obstacle {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.body.treatment = 'static';
+
+        this.origY = this.y;
+        this.time = 0;
+    }
+
+    update() {
+        super.update();
+
+        this.time++;
+
+        let d = Math.sin(this.time / 75) * (Constants.obstacleSize);
+        this.y = this.origY + d;
+
+        //this.body.state.pos.set(this.x, this.origY + d);
+
+        //this.y = this.origY + d;
+    }
+}
+
+class ObstacleSlide3 extends Obstacle {
+    constructor(game, x, y) {
+        super(game, x, y);
+
+        this.body.treatment = 'static';
+
+        this.origY = this.y;
+        this.time = 0;
+    }
+
+    update() {
+        super.update();
+
+        this.time++;
+
+        let d = Math.sin(this.time / 75) * (-Constants.obstacleSize);
+        this.y = this.origY + d;
+
+        //this.body.state.pos.set(this.x, this.origY + d);
+
+        //this.y = this.origY + d;
+    }
+}
+
 class ObstacleGroup extends ElemObject {
     constructor(game, x, y) {
         super(game, x, y);
@@ -914,6 +979,7 @@ class Game {
         this.$results.data('transitioning', true);
 
         if(this.$results.hasClass('win') || this.$results.hasClass('first-load')) this.currentLevel++;
+        if(this.currentLevel >= 3) return;
 
         new Queue(0)
             .next(() => { this.$results.removeClass('first-load'); })

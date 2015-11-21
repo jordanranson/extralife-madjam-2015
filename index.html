@@ -13,18 +13,34 @@
     <link rel="stylesheet/less" type="text/css" href="styles.less">
 
     <style>
-        .container {
-            padding: 34px;
+        .main-container {
+            margin: 50px auto;
+            width: 667px;
+            height: 375px;
+            overflow: hidden;
+            border-radius: 5px;
         }
 
         body {
             background-color: #222;
-            color: #ddd;
+            color: #7DB9B3;
             letter-spacing: 0px;
         }
 
         p {
             max-width: 667px;
+        }
+
+        a {
+            display: inline-block;
+            color: #222;
+            font-size: 11px;
+            background: #7DB9B3;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 1px 3px;
+            text-decoration: none;
+            border-radius: 2px;
         }
     </style>
 
@@ -32,15 +48,21 @@
 <body>
 
 
-<div class="container main-container x-container">
+<div class="main-container x-container">
     <iframe style="width:667px;height:375px;overflow:hidden" frameborder="0" src="iphone.html"></iframe>
-    <br>
+</div>
+<div class="main-container">
     <p>
         Circuit/Square is an iOS 6s 3D Touch based game. Move the nodes around to build and complete circuits.
         In this PC demo, click and hold the diamonds to move them over the empty spaces.
-        If you are on iOS with an iPhone 6S or 6S+ please visit /iphone.html and add the page to your homescreen.
+        <a href="./iphone.html">If you are on iOS with an iPhone 6S or 6S+ please tap here</a>.
     </p>
-</div>
+    <p>
+        Made by <a href="//twitter.com/jordanranson" target="_blank">Jordan Ranson</a> 
+        in 24 hours for the 2015 Extralife MADJAM hosted by 
+        <a href="//www.madsoftgames.com" target="_blank">MADSOFT Games</a>.
+    </p>
+</div>   
 
 <script src="less.js" type="text/javascript"></script>
 
